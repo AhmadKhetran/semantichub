@@ -1,7 +1,6 @@
-import { ReactNode } from "react";
-
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { APP_CONFIG } from "@/config/app-config";
@@ -9,6 +8,7 @@ import { getPreference } from "@/server/server-actions";
 import { ThemeMode, allowedThemeModes, ThemePreset, allowedThemePresets } from "@/types/preferences";
 
 import "./globals.css";
+import { Provider } from "./utils/SessionProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,8 +29,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <body className={`${inter.className} min-h-screen antialiased`}>
-        {children}
-        <Toaster />
+        <Provider>
+          {children}
+          <Toaster />
+        </Provider>
       </body>
     </html>
   );

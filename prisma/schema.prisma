@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  ANALYST
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  IN_PROGRESS
+  ERROR
+}
+
+enum ConnectionType {
+  POSTGRESQL
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  INVITED
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+  oauth_token_secret String?
+  oauth_token        String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  password String?
+  role     Role
+
+  status      UserStatus @default(INVITED)
+  inviteToken String?    @unique
+  invitedAt   DateTime   @default(now())
+
+  Account    Account[]
+  Session    Session[]
+  catalogues Catalogue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Catalogue {
+  id            String           @id @default(cuid())
+  catalogueName String
+  host          String
+  port          String
+  type          String
+  datasource    ConnectionType
+  userName      String
+  password      String
+  status        ConnectionStatus @default(IN_PROGRESS)
+  createdBy     User             @relation(fields: [createdById], references: [id])
+  createdById   String
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  catalogueTable CatalogueTable[]
+}
+
+model CatalogueTable {
+  id               String   @id @default(uuid())
+  tableName        String
+  standardOntology String
+  foreignKey       Json
+  constraints      Json
+  noRows           Int
+  indexes          String[]
+
+  catalogue   Catalogue @relation(fields: [catalogueId], references: [id])
+  catalogueId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  catalogueColumn    CatalogueColumn[]
+}
+
+model CatalogueColumn {
+  id            String   @id @default(uuid())
+  columnName    String
+  columnType    String
+  isNullable    Boolean  @default(false)
+  defaultValue  Boolean  @default(false)
+  description   String?
+  glossaryTerms String[]
+  tags          String[]
+  synonyms      String[]
+  pii           Boolean  @default(false)
+
+  profiling ProfilingInfo[]
+
+  catalogueTable   CatalogueTable @relation(fields: [catalogueTableId], references: [id])
+  catalogueTableId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProfilingInfo {
+  id              String @id @default(uuid())
+  expectationType String
+  report          Json
+
+  catalogueColumn   CatalogueColumn @relation(fields: [catalogueColumnId], references: [id])
+  catalogueColumnId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
